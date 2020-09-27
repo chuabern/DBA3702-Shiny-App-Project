@@ -1,0 +1,149 @@
+---
+title: "Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+What I need to achieve:
+Ggmap: Locations of schools 
+
+Shiny app: 
+- A drop down list of the schools in the region (see zone_code)
+- Include transportation details (buses, mrt station)
+  (Parse data from Google maps based on the coordinates of the school)
+
+```{r}
+library(ggmap)
+ggmap::register_google(key = "AIzaSyDu7FNRizdcFzNRfXUxfrlzpSUncyAQ_0k")
+library(maptools)
+
+library(raster)
+library(rgdal)
+library(leaflet)
+library(leaflet.extras)
+
+library(erer)
+library(shiny)
+library(RColorBrewer)
+```
+
+
+```{r}
+# Read data
+data <- read.csv("general-information-of-schools.csv")
+head(data)
+
+# Get data structure
+str(data)
+
+# address (char), zipcode (char), region (factor), lon (num), lat (num)
+
+```
+
+```{r}
+library(dplyr)
+
+# Filter out only secondary schools
+data <- data[data$mainlevel_code == "SECONDARY",]
+head(data)
+
+# Filter out useful info: school name, address, postal_code, dgp_code, zone_code
+data_m <- data %>% select("school_name", "address", "postal_code", "dgp_code", "zone_code")
+head(data_m)
+
+# Using postal_code, we can get the map coordinates --> geocode()
+library(ggmap)
+ggmap::register_google(key = "AIzaSyDu7FNRizdcFzNRfXUxfrlzpSUncyAQ_0k")
+
+# Convert postal code into character and include "Singapore" 
+head(data_m$postal_code)
+data_m$postal_code_new <- paste("Singapore", as.character(data_m$postal_code))
+head(data_m$postal_code_new)
+
+coords <- geocode(data_m$postal_code_new)
+data_new <- cbind(data_m$school_name, data_m$address, data_m$zone_code, data_m$dgp_code, coords)
+head(data_new)
+
+# Rename the columns
+colnames(data_new) <- c("Schools", "Address", "Regions", "Districts", "lon", "lat")
+head(data_new)
+str(data_new)
+data_new$Schools <- as.character(data_new$Schools)
+data_new$Address <- as.character(data_new$Address)
+data_new$Districts <- as.character(data_new$Districts)
+str(data_new)
+
+# Start plotting ggmap
+unique(data_new$Regions)
+str(data_new$Regions)
+
+# region_list needs to be in alphabetical order to match with data_new$Regions
+region_list <- c("EAST", "NORTH", "SOUTH", "WEST")
+colorFactors <- colorFactor(c('red', 'green', 'blue', 'brown'),
+                            domain = data_new$Regions)
+
+# Initiate a leaflet
+m <- leaflet() %>% addTiles()
+
+for (i in 1:4) {
+  
+  data_tmp.Region <- data_new[data_new$Regions == region_list[i], ]
+  
+  m <- addCircleMarkers(m, 
+                        lng = data_tmp.Region$lon, 
+                        lat = data_tmp.Region$lat, 
+                        popup = data_tmp.Region$Schools, 
+                        radius = 10, 
+                        stroke = FALSE, 
+                        fillOpacity = 1, 
+                        color = colorFactors(data_tmp.Region$Regions),
+                        group = region_list[i]
+  )
+  
+}
+
+m <- addTiles(m, group = "Default")
+m <- addProviderTiles(m,"Esri.WorldImagery", group = "Esri")
+m <- addProviderTiles(m,"Stamen.Toner", group = "Toner")
+m <- addProviderTiles(m, "Stamen.TonerLite", group = "Toner Lite")
+
+m <- addLayersControl(m, baseGroups = c("Default", "Esri", "Toner Lite","Toner"),
+                      overlayGroups = region_list)
+
+m
+
+# Save the result as html page
+library(htmlwidgets)
+saveWidget(m, file = "schools_location.html")
+
+```
+
+```{r}
+# Create a table to store bus and mrt data
+data_t <- cbind(data_new, data$bus_desc, data$mrt_desc)
+colnames(data_t) <- c("Schools", "Address", "Regions", "Districts", "lon", "lat", "Buses", "MRT")
+
+data_t$Buses <- as.character(data_t$Buses)
+data_t$MRT <- as.character(data_t$MRT)
+head(data_t)
+str(data_t)
+
+school_list <- c(data_t$Schools)
+head(school_list)
+
+count <- nrow(data_t)
+count
+
+for (i in 1:count) {
+  
+  n <- rbind(n, cbind(data_t[data_t$Schools == school_list[i], ]$Buses, 
+             data_t[data_t$Schools == school_list[i], ]$MRT))
+}
+
+head(n)
+summary(n) --> Gives frequency of a particular bus
+
+```

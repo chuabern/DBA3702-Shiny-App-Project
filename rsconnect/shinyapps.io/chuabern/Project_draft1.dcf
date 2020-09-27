@@ -1,0 +1,13 @@
+name: Project_draft1
+title: Project_draft1
+username:
+account: chuabern
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 827637
+bundleId: 1977205
+url: https://chuabern.shinyapps.io/Project_draft1/
+when: 1554055385.00677
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData|co-curricular-activities-ccas.csv|general-information-of-schools.csv|metadata-school-directory-and-information.txt|moe-programmes.csv|Nat's working.Rmd|school-distinctive-programmes.csv|Sec Sch Cut off point 2018.csv|subjects-offered.csv|Team Project Assignment.pdf|wrkng.Rmd|appR/app.R|test/app.R
